@@ -1,0 +1,8 @@
+"use client";
+import {useQuery} from "@tanstack/react-query";
+import {Search} from "lucide-react";
+import {useState} from "react";
+import {api,Lead} from "@/lib/api";
+import {LeadRow,PageHeader} from "@/components/dashboard-ui";
+export default function Leads(){const [q,setQ]=useState(''),[classification,setClassification]=useState('');const {data=[]}=useQuery({queryKey:['leads',q,classification],queryFn:()=>api<Lead[]>(`/api/leads?q=${encodeURIComponent(q)}${classification?`&classification=${classification}`:''}`),refetchInterval:5000});return <><PageHeader eyebrow="CRM" title="Leads" description={`${data.length} opportunities in this view`} action={<a className="button button-primary" href="/demo">+ Add demo lead</a>}/><div className="panel"><div className="flex flex-col gap-3 border-b border-[#eceeec] p-4 sm:flex-row"><label className="relative flex-1"><Search className="absolute left-3 top-3 h-4 w-4 text-[#8b938f]"/><input className="field pl-9" value={q} onChange={e=>setQ(e.target.value)} placeholder="Search name, company or email…"/></label><select className="field sm:w-44" value={classification} onChange={e=>setClassification(e.target.value)}><option value="">All classifications</option><option>Hot</option><option>Warm</option><option>Cold</option></select></div><div className="overflow-x-auto"><div className="grid min-w-[760px] grid-cols-[1.4fr_1.2fr_.7fr_1fr_.7fr] gap-4 border-b border-[#eceeec] bg-[#fafbfa] px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-[#7a837f]"><span>Lead</span><span>Company</span><span>Score</span><span>Stage</span><span>Created</span></div>{data.map(l=><LeadRow key={l.id} lead={l}/>)}</div></div></>}
+

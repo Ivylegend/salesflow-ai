@@ -1,0 +1,7 @@
+"use client";
+import {useQuery} from "@tanstack/react-query";
+import {CalendarClock,ExternalLink} from "lucide-react";
+import {api,Lead} from "@/lib/api";
+import {Empty,PageHeader} from "@/components/dashboard-ui";
+export default function Appointments(){const {data=[]}=useQuery({queryKey:['leads','appointments'],queryFn:()=>api<Lead[]>('/api/leads'),refetchInterval:7000});const items=data.flatMap(l=>(l.appointments||[]).map(a=>({...a,lead:l}))).sort((a,b)=>+new Date(a.starts_at)-+new Date(b.starts_at));return <><PageHeader eyebrow="Calendar" title="Appointments" description="Bookings associated with sales opportunities."/>{items.length===0?<Empty>No appointments yet. Confirmed Cal.com bookings will appear here and move the lead to Meeting Scheduled.</Empty>:<div className="panel overflow-hidden"><div className="grid grid-cols-[80px_1fr_1fr_100px] border-b border-[#eceeec] bg-[#fafbfa] p-3 text-[10px] font-bold uppercase tracking-wider text-[#7a837f]"><span>Time</span><span>Lead</span><span>Company</span><span>Status</span></div>{items.map(a=><div key={a.id} className="grid grid-cols-[80px_1fr_1fr_100px] items-center border-b border-[#eceeec] p-3 text-xs"><span className="font-bold">{new Date(a.starts_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span><span>{a.lead.full_name}</span><span>{a.lead.company}</span><span className="pill w-fit bg-[#e5f2eb] text-[#236450]">{a.status}</span></div>)}</div>}</>}
+
