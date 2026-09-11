@@ -27,12 +27,11 @@ def test_pipeline_change_records_activity(client,lead_payload,auth):
 def test_appointment_association_is_idempotent(client,lead_payload,auth):
     lead=client.post('/api/public/leads',json=lead_payload).json()
     payload={"external_id":"cal-evt-1","email":lead['email'],"starts_at":"2026-09-15T10:00:00Z","ends_at":"2026-09-15T10:30:00Z","booking_url":"https://cal.com/example/demo"}
-    headers={'X-SalesFlow-Secret':'test-cal'}
-    first=client.post('/api/webhooks/calcom',json=payload,headers=headers)
-    second=client.post('/api/webhooks/calcom',json=payload,headers=headers)
+    headers={'X-SalesFlow-Secret':'test-webhook'}
+    first=client.post('/api/internal/appointments',json=payload,headers=headers)
+    second=client.post('/api/internal/appointments',json=payload,headers=headers)
     assert first.status_code==200
     assert second.json()['status']=='duplicate'
     detail=client.get(f"/api/leads/{lead['id']}",headers=auth).json()
     assert detail['stage']=='Meeting Scheduled'
     assert len(detail['appointments'])==1
-

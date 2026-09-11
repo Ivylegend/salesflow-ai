@@ -13,7 +13,7 @@ from app.database import get_db
 from app.models import Appointment, AutomationRun, Email, Lead, LeadActivity, Note, RunStatus, Stage, Temperature, User
 from app.schemas import AppointmentIn, AutomationRunIn, EmailLogIn, LeadCreate, LeadOut, NoteCreate, QualificationIn, StageUpdate, TokenOut
 from app.security import create_token, current_user, verify_password
-from app.services import add_activity, persist_qualification, qualify_with_openai, trigger_n8n, verify_secret
+from app.services import add_activity, persist_qualification, qualify_with_openai, trigger_n8n, verify_hmac, verify_secret
 
 limiter = Limiter(key_func=get_remote_address)
 app = FastAPI(title="SalesFlow AI API", version="1.0.0")
@@ -85,10 +85,7 @@ def save_qualification(lead_id: str, payload: QualificationIn, x_salesflow_secre
     if lead.qualification: return {"status":"already_processed","lead_id":lead.id}
     persist_qualification(db, lead, payload, settings.openai_model); return {"status":"saved","lead_id":lead.id}
 
-@app.post("/api/webhooks/calcom")
-def calcom_webhook(payload: AppointmentIn, x_cal_signature_256: str | None = Header(None), x_salesflow_secret: str | None = Header(None), db: Session = Depends(get_db)):
-    secret = x_salesflow_secret or x_cal_signature_256
-    if not verify_secret(secret, settings.calcom_webhook_secret): raise HTTPException(401, "Invalid webhook secret")
+def associate_appointment(payload: AppointmentIn, db: Session):
     existing = db.scalar(select(Appointment).where(Appointment.external_id == payload.external_id))
     if existing: return {"status":"duplicate","appointment_id":existing.id}
     lead = db.scalar(select(Lead).where(func.lower(Lead.email) == payload.email.lower()).order_by(Lead.created_at.desc()))
@@ -96,6 +93,22 @@ def calcom_webhook(payload: AppointmentIn, x_cal_signature_256: str | None = Hea
     appointment = Appointment(lead_id=lead.id, **payload.model_dump(exclude={"email"})); db.add(appointment)
     lead.stage = Stage.MEETING; add_activity(db, lead.id, "appointment_scheduled", "Appointment scheduled", payload.starts_at.isoformat())
     db.commit(); db.refresh(appointment); return {"status":"created","appointment_id":appointment.id,"lead_id":lead.id}
+
+@app.post("/api/internal/appointments")
+def internal_appointment(payload: AppointmentIn, x_salesflow_secret: str | None = Header(None), db: Session = Depends(get_db)):
+    if not verify_secret(x_salesflow_secret, settings.n8n_webhook_secret): raise HTTPException(401, "Invalid webhook secret")
+    return associate_appointment(payload,db)
+
+@app.post("/api/webhooks/calcom")
+async def calcom_webhook(request: Request, x_cal_signature_256: str | None = Header(None), x_salesflow_secret: str | None = Header(None), db: Session = Depends(get_db)):
+    body=await request.body()
+    raw=await request.json()
+    if verify_secret(x_salesflow_secret,settings.calcom_webhook_secret): return associate_appointment(AppointmentIn.model_validate(raw),db)
+    if not verify_hmac(body,x_cal_signature_256,settings.calcom_webhook_secret): raise HTTPException(401,"Invalid webhook signature")
+    event=raw.get("payload",raw); responses=event.get("responses",{}); attendees=event.get("attendees",[])
+    email=(attendees[0].get("email") if attendees else None) or responses.get("email",{}).get("value")
+    payload=AppointmentIn(external_id=event.get("bookingUid") or event.get("uid") or str(event.get("bookingId")),email=email,starts_at=event.get("startTime"),ends_at=event.get("endTime"),status="scheduled",booking_url=event.get("metadata",{}).get("videoCallUrl"))
+    return associate_appointment(payload,db)
 
 @app.post("/api/internal/leads/{lead_id}/emails")
 def log_email(lead_id: str, payload: EmailLogIn, x_salesflow_secret: str | None = Header(None), db: Session = Depends(get_db)):

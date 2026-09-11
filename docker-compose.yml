@@ -59,6 +59,15 @@ services:
       WEBHOOK_URL: ${WEBHOOK_URL:-http://localhost:5678/}
       N8N_DIAGNOSTICS_ENABLED: "false"
       N8N_PERSONALIZATION_ENABLED: "false"
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5-mini}
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL}
+      SALESFLOW_API_URL: http://api:8000
+      N8N_WEBHOOK_SECRET: ${N8N_WEBHOOK_SECRET}
+      CALCOM_WEBHOOK_SECRET: ${CALCOM_WEBHOOK_SECRET}
+      CALCOM_BOOKING_URL: ${CALCOM_BOOKING_URL}
       GENERIC_TIMEZONE: Africa/Lagos
     volumes:
       - salesflow_n8n:/home/node/.n8n
@@ -70,4 +79,3 @@ services:
 volumes:
   salesflow_postgres:
   salesflow_n8n:
-

@@ -28,6 +28,11 @@ QUALIFICATION_SCHEMA = {
 def verify_secret(received: str | None, expected: str) -> bool:
     return bool(received) and hmac.compare_digest(received, expected)
 
+def verify_hmac(body: bytes, received: str | None, secret: str) -> bool:
+    if not received or not secret: return False
+    expected=hmac.new(secret.encode(),body,hashlib.sha256).hexdigest()
+    return hmac.compare_digest(received.removeprefix("sha256="),expected)
+
 def add_activity(db: Session, lead_id: str, type_: str, title: str, description: str = "", metadata: dict | None = None):
     db.add(LeadActivity(lead_id=lead_id, type=type_, title=title, description=description, metadata_json=metadata or {}))
 
@@ -62,4 +67,3 @@ def persist_qualification(db: Session, lead: Lead, data: QualificationIn, model:
     add_activity(db, lead.id, "qualification_completed", "AI qualification completed", f"Scored {data.score}/100 · {data.classification.value}")
     db.commit(); db.refresh(lead)
     return qualification
-
