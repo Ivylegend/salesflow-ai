@@ -17,9 +17,26 @@ services:
 
   api:
     build: ./apps/api
-    env_file: .env
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-salesflow}:${POSTGRES_PASSWORD:-salesflow-local}@postgres:5432/${POSTGRES_DB:-salesflow}
+      APP_ENV: ${APP_ENV:-production}
+      APP_URL: ${APP_URL}
+      API_URL: ${API_URL}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      JWT_SECRET: ${JWT_SECRET}
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      ACCESS_TOKEN_MINUTES: ${ACCESS_TOKEN_MINUTES:-480}
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5-mini}
+      N8N_BASE_URL: http://n8n:5678
+      N8N_LEAD_WEBHOOK_URL: http://n8n:5678/webhook/salesflow-lead
+      N8N_WEBHOOK_SECRET: ${N8N_WEBHOOK_SECRET}
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL}
+      CALCOM_BOOKING_URL: ${CALCOM_BOOKING_URL}
+      CALCOM_WEBHOOK_SECRET: ${CALCOM_WEBHOOK_SECRET}
     depends_on:
       postgres:
         condition: service_healthy
