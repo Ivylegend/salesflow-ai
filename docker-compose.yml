@@ -31,7 +31,7 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5-mini}
       N8N_BASE_URL: http://n8n:5678
-      N8N_LEAD_WEBHOOK_URL: http://n8n:5678/webhook/salesflow-lead
+      N8N_LEAD_WEBHOOK_URL: http://n8n:5678/webhook/salesflow-lead-v2
       N8N_WEBHOOK_SECRET: ${N8N_WEBHOOK_SECRET}
       RESEND_API_KEY: ${RESEND_API_KEY}
       RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL}
