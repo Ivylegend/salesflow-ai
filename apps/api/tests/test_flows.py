@@ -24,6 +24,18 @@ def test_pipeline_change_records_activity(client,lead_payload,auth):
     assert detail['stage']=='Contacted'
     assert any(a['type']=='pipeline_changed' for a in detail['activities'])
 
+def test_openai_failure_is_authenticated_and_visible(client,lead_payload,auth):
+    lead=client.post('/api/public/leads',json=lead_payload).json()
+    payload={"service":"OpenAI","message":"insufficient_quota: billing quota exceeded","status_code":"429"}
+    url=f"/api/internal/leads/{lead['id']}/integration-failure"
+    assert client.post(url,json=payload).status_code==401
+    saved=client.post(url,json=payload,headers={'X-SalesFlow-Secret':'test-webhook'})
+    assert saved.status_code==200
+    detail=client.get(f"/api/leads/{lead['id']}",headers=auth).json()
+    failure=next(a for a in detail['activities'] if a['type']=='automation_failed')
+    assert failure['title']=='OpenAI request failed'
+    assert 'insufficient_quota' in failure['description']
+
 def test_appointment_association_is_idempotent(client,lead_payload,auth):
     lead=client.post('/api/public/leads',json=lead_payload).json()
     payload={"external_id":"cal-evt-1","email":lead['email'],"starts_at":"2026-09-15T10:00:00Z","ends_at":"2026-09-15T10:30:00Z","booking_url":"https://cal.com/example/demo"}

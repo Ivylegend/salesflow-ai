@@ -71,3 +71,8 @@ class AutomationRunIn(BaseModel):
     status: Literal["pending", "running", "succeeded", "failed"]
     idempotency_key: str = Field(min_length=3, max_length=180)
     error: str | None = Field(default=None, max_length=1000)
+
+class IntegrationFailureIn(BaseModel):
+    service: str = Field(min_length=2, max_length=80)
+    message: str = Field(min_length=1, max_length=2000)
+    status_code: str | None = Field(default=None, max_length=40)

@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session, selectinload
 from app.config import settings
 from app.database import get_db
 from app.models import Appointment, AutomationRun, Email, Lead, LeadActivity, Note, RunStatus, Stage, Temperature, User
-from app.schemas import AppointmentIn, AutomationRunIn, EmailLogIn, LeadCreate, LeadOut, NoteCreate, QualificationIn, StageUpdate, TokenOut
+from app.schemas import AppointmentIn, AutomationRunIn, EmailLogIn, IntegrationFailureIn, LeadCreate, LeadOut, NoteCreate, QualificationIn, StageUpdate, TokenOut
 from app.security import create_token, current_user, verify_password
 from app.services import add_activity, persist_qualification, qualify_with_openai, trigger_n8n, verify_hmac, verify_secret
 
@@ -84,6 +84,15 @@ def save_qualification(lead_id: str, payload: QualificationIn, x_salesflow_secre
     if not lead: raise HTTPException(404, "Lead not found")
     if lead.qualification: return {"status":"already_processed","lead_id":lead.id}
     persist_qualification(db, lead, payload, settings.openai_model); return {"status":"saved","lead_id":lead.id}
+
+@app.post("/api/internal/leads/{lead_id}/integration-failure")
+def record_integration_failure(lead_id: str, payload: IntegrationFailureIn, x_salesflow_secret: str | None = Header(None), db: Session = Depends(get_db)):
+    if not verify_secret(x_salesflow_secret, settings.n8n_webhook_secret): raise HTTPException(401, "Invalid webhook secret")
+    if not db.get(Lead, lead_id): raise HTTPException(404, "Lead not found")
+    status = f" (HTTP {payload.status_code})" if payload.status_code else ""
+    add_activity(db, lead_id, "automation_failed", f"{payload.service} request failed", f"{payload.message}{status}")
+    db.commit()
+    return {"status":"recorded","lead_id":lead_id}
 
 def associate_appointment(payload: AppointmentIn, db: Session):
     existing = db.scalar(select(Appointment).where(Appointment.external_id == payload.external_id))
